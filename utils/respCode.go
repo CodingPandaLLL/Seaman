@@ -1,0 +1,60 @@
+package utils
+
+//请求状态码
+const (
+	RECODE_OK      = 1  //请求成功 正常
+	RECODE_FAIL    = 0  //失败
+	RECODE_UNLOGIN = -1 //未登录 没有权限
+)
+
+//业务逻辑状态码
+const (
+	RESPMSG_OK   = "1"
+	RESPMSG_FAIL = "0"
+
+	//未登陆
+	EEROR_UNLOGIN           = "ERROR_UNLOGIN"
+	RESPMSG_SIGNOUT         = "SUCCESS_SIGNOUT"
+	RESPMSG_ERRORADMINCOUNT = "RESPMSG_ERRORADMINCOUNT"
+	RESPMSG_ERROR_USERLIST  = "RESPMSG_ERROR_USERLIST"
+	RESPMSG_ERROR_USERINFO  = "RESPMSG_ERROR_USERINFO"
+
+	RESPMSG_ERROR_ADD      = "RESPMSG_ERROR_ADD"
+	RESPMSG_SUCCESS_ADD    = "RESPMSG_SUCCESS_ADD"
+	RESPMSG_ERROR_PARAM    = "RESPMSG_ERROR_PARAM"
+	RESPMSG_ERROR_QUERY    = "RESPMSG_ERROR_QUERY"
+	RESPMSG_ERROR_DELETE   = "RESPMSG_ERROR_DELETE"
+	RESPMSG_SUCCESS_DELETE = "RESPMSG_SUCCESS_DELETE"
+	RESPMSG_ERROR_UPDATE   = "RESPMSG_ERROR_UPDATE"
+	RESPMSG_SUCCESS_UPDATE = "RESPMSG_SUCCESS_UPDATE"
+
+	RECODE_UNKNOWERR = "8000"
+)
+
+//业务逻辑状态信息描述
+var recodeText = map[string]string{
+	RESPMSG_OK:              "成功",
+	RESPMSG_FAIL:            "失败",
+	EEROR_UNLOGIN:           "未登陆无操作权限，请先登陆", //未登陆 没有权限
+	RESPMSG_SIGNOUT:         "退出成功",
+	RESPMSG_ERRORADMINCOUNT: "获取管理员总数失败",
+	RESPMSG_ERROR_USERLIST:  "查询用户失败",
+	RESPMSG_ERROR_USERINFO:  "查询用户信息失败",
+
+	RESPMSG_ERROR_ADD:      "添加失败",
+	RESPMSG_SUCCESS_ADD:    "添加成功",
+	RESPMSG_ERROR_PARAM:    "参数错误",
+	RESPMSG_ERROR_QUERY:    "查询失败",
+	RESPMSG_ERROR_DELETE:   "删除失败",
+	RESPMSG_SUCCESS_DELETE: "删除成功",
+	RESPMSG_ERROR_UPDATE:   "更新失败",
+	RESPMSG_SUCCESS_UPDATE: "更新成功",
+}
+
+func Recode2Text(code string) string {
+	str, ok := recodeText[code]
+	if ok {
+		return str
+	}
+	return recodeText[RECODE_UNKNOWERR]
+}
