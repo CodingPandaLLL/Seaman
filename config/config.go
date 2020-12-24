@@ -3,6 +3,9 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 //服务端配置
@@ -29,7 +32,9 @@ type DataBase struct {
 //初始化服务器配置
 func InitConfig() *AppConfig {
 	var config *AppConfig
-	file, err := os.Open("D:\\GoPath\\src\\Seaman\\config.json")
+	//拼接路径
+	path := filepath.Join(GetAppPath(), "config.json")
+	file, err := os.Open(path)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -39,6 +44,13 @@ func InitConfig() *AppConfig {
 		panic(err.Error())
 	}
 	//config = &AppConfig{}
-
 	return config
+}
+
+//获取项目路径
+func GetAppPath() string {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	index := strings.LastIndex(path, string(os.PathSeparator))
+	return path[:index]
 }

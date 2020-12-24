@@ -35,7 +35,7 @@ func (uc *UserController) BeforeActivation(a mvc.BeforeActivation) {
 	a.Handle("DELETE", "/{id}", "DeleteUser")
 
 	//查询用户
-	a.Handle("GET", "/{id}", "GetUser")
+	a.Handle("GET", "single/{id}", "GetUser")
 
 	//查询用户数量
 	a.Handle("GET", "/count", "GetCount")
@@ -180,7 +180,7 @@ func (uc *UserController) GetUser() mvc.Result {
 
 	//返回用户
 	return mvc.Response{
-		Object: user,
+		Object: user.UserToRespDesc(),
 	}
 }
 

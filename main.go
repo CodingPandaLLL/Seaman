@@ -77,7 +77,7 @@ func mvcHandle(app *iris.Application) {
 	//安全模块功能
 	securityService := service.NewSecurityService(engine)
 
-	admin := mvc.New(app.Party("/security"))
+	admin := mvc.New(app.Party("/services/security"))
 	admin.Register(
 		securityService,
 		sessManager.Start,
@@ -86,7 +86,7 @@ func mvcHandle(app *iris.Application) {
 
 	//用户功能模块
 	userService := service.NewUserService(engine)
-	user := mvc.New(app.Party("/user"))
+	user := mvc.New(app.Party("/services/security/user"))
 	user.Register(
 		userService,
 		sessManager.Start,

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Seaman/model"
 	"Seaman/service"
 	"Seaman/utils"
 	"crypto/md5"
@@ -31,7 +32,7 @@ const (
 )
 
 type AdminLogin struct {
-	UserName string `json:"user_name"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -124,7 +125,7 @@ func (ac *SecurityController) GetInfo() mvc.Result {
 	if !exit {
 		return mvc.Response{
 			Object: map[string]interface{}{
-				"status":  "0",
+				"status":  0,
 				"success": "登录失败",
 				"message": "用户名或者密码错误,请重新登录",
 			},
@@ -152,12 +153,12 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 	ac.Ctx.ReadJSON(&adminLogin)
 
 	//数据参数检验
-	if adminLogin.UserName == "" || adminLogin.Password == "" {
+	if adminLogin.Username == "" || adminLogin.Password == "" {
 		return mvc.Response{
 			Object: map[string]interface{}{
-				"status":  "0",
-				"success": "登录失败",
-				"message": "用户名或密码为空,请重新填写后尝试登录",
+				"loginStatus": 0,
+				"success":     "登录失败",
+				"message":     "用户名或密码为空,请重新填写后尝试登录",
 			},
 		}
 	}
@@ -168,15 +169,15 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 	m.Write([]byte(pwd))
 	pwd = hex.EncodeToString(m.Sum(nil))
 	//根据用户名、密码到数据库中查询对应的管理信息
-	user, exist := ac.Service.GetByAdminNameAndPassword(adminLogin.UserName, pwd)
+	user, exist := ac.Service.GetByAdminNameAndPassword(adminLogin.Username, pwd)
 
 	//管理员不存在
 	if !exist {
 		return mvc.Response{
 			Object: map[string]interface{}{
-				"status":  "0",
-				"success": "登录失败",
-				"message": "用户名或者密码错误,请重新登录",
+				"loginStatus": 0,
+				"success":     "登录失败",
+				"message":     "用户名或者密码错误,请重新登录",
 			},
 		}
 	}
@@ -185,11 +186,14 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 	//userByte := admin.Encoder()
 	ac.Session.Set(ADMIN, user.Id)
 
+	resultUser := new(model.LoginUser)
+	resultUser.UserId = user.Id
 	return mvc.Response{
 		Object: map[string]interface{}{
-			"status":  "ok",
-			"success": "登录成功",
-			"message": "管理员登录成功",
+			"loginStatus": 1,
+			"success":     "登录成功",
+			"message":     "登录成功",
+			"user":        resultUser.LoginUserToRespDesc(),
 		},
 	}
 }
