@@ -15,7 +15,7 @@ type SecurityService interface {
 	//通过管理员用户名+密码 获取管理员实体 如果查询到，返回管理员实体，并返回true
 	//否则 返回 nil ，false
 	GetByAdminNameAndPassword(username, password string) (model.TplUserT, bool)
-	GetByAdminId(adminId int64) (model.TplUserT, bool)
+	GetByCurrentUserId(currentUserId int64) (model.TplUserT, bool)
 	//获取管理员总数
 	GetAdminCount() (int64, error)
 	SaveAvatarImg(adminId int64, fileName string) bool
@@ -63,11 +63,9 @@ func (ac *securityService) GetByAdminNameAndPassword(username, password string) 
 /**
  * 查询管理员信息
  */
-func (ac *securityService) GetByAdminId(adminId int64) (model.TplUserT, bool) {
+func (ac *securityService) GetByCurrentUserId(currentUserId int64) (model.TplUserT, bool) {
 	var user model.TplUserT
-
-	ac.engine.Id(adminId).Get(&user)
-
+	ac.engine.Id(currentUserId).Get(&user)
 	return user, user.Id != 0
 }
 

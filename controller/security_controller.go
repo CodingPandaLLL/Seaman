@@ -6,6 +6,7 @@ import (
 	"Seaman/utils"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/kataras/iris/v12/sessions"
@@ -27,13 +28,18 @@ type SecurityController struct {
 }
 
 const (
-	ADMINTABLENAME = "admin"
-	ADMIN          = "adminId"
+	CURRENTUSERNAME = "userName"
+	CURRENTUSERID    = "userId"
 )
 
 type AdminLogin struct {
-	Username string `json:"username"`
+	Username string `json:"userName"`
 	Password string `json:"password"`
+}
+
+func (ac *SecurityController) BeforeActivation(a mvc.BeforeActivation) {
+	//查询已登录的用户
+	a.Handle("GET", "/currentUser", "GetCurrentUser")
 }
 
 /**
@@ -44,7 +50,7 @@ type AdminLogin struct {
 func (ac *SecurityController) GetSingout() mvc.Result {
 
 	//删除session，下次需要从新登录
-	ac.Session.Delete(ADMIN)
+	ac.Session.Delete(CURRENTUSERID)
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"status":  utils.RECODE_OK,
@@ -85,13 +91,12 @@ func (ac *SecurityController) GetCount() mvc.Result {
  * 请求类型：Get
  * 请求url：/admin/info
  */
-func (ac *SecurityController) GetInfo() mvc.Result {
+func (ac *SecurityController) GetCurrentUser() mvc.Result {
 
 	//从session中获取信息
-	userByte := ac.Session.Get(ADMIN)
-
+	currentUser:=ac.Session.Get(CURRENTUSERID)
 	//session为空
-	if userByte == nil {
+	if currentUser == nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_UNLOGIN,
@@ -107,7 +112,7 @@ func (ac *SecurityController) GetInfo() mvc.Result {
 	//jsonStr := "" + userByte.(string) + ""
 	//admin = model.Decoder([]byte(jsonStr))
 
-	adminId, err := ac.Session.GetInt64(ADMIN)
+	currentUserId, err := ac.Session.GetInt64(CURRENTUSERID)
 
 	//解析失败
 	if err != nil {
@@ -119,8 +124,7 @@ func (ac *SecurityController) GetInfo() mvc.Result {
 			},
 		}
 	}
-
-	userObject, exit := ac.Service.GetByAdminId(adminId)
+	userObject, exit := ac.Service.GetByCurrentUserId(currentUserId)
 
 	if !exit {
 		return mvc.Response{
@@ -135,8 +139,9 @@ func (ac *SecurityController) GetInfo() mvc.Result {
 	//解析成功
 	return mvc.Response{
 		Object: map[string]interface{}{
-			"status": utils.RECODE_OK,
-			"data":   userObject.UserToRespDesc(),
+			"userid": userObject.Id,
+			"name":   userObject.Lastname,
+			"title":userObject.Account,
 		},
 	}
 }
@@ -184,13 +189,15 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 
 	//管理员存在 设置session
 	//userByte := admin.Encoder()
-	ac.Session.Set(ADMIN, user.Id)
+	ac.Session.Set(CURRENTUSERID, user.Id)
+	//ac.Session.Increment(CURRENTUSERID, int(user.Id))
 
+	fmt.Print(ac.Session.Get(CURRENTUSERID))
 	resultUser := new(model.LoginUser)
 	resultUser.UserId = user.Id
 	return mvc.Response{
 		Object: map[string]interface{}{
-			"loginStatus": 1,
+			"status": "ok",
 			"success":     "登录成功",
 			"message":     "登录成功",
 			"user":        resultUser.LoginUserToRespDesc(),

@@ -8,10 +8,10 @@ type TplUserGroupT struct {
 /**
  * 将数据库查询出来的结果进行格式组装成request请求需要的json字段格式
  */
-func (tplUserGroupT *TplUserGroupT) tplUserGroupTToRespDesc() interface{} {
+func (tplUserGroupT *TplUserGroupT) UserGroupTToRespDesc() interface{} {
 	respInfo := map[string]interface{}{
-		"user_id":  tplUserGroupT.UserId,
-		"group_id": tplUserGroupT.GroupId,
+		"userId":  tplUserGroupT.UserId,
+		"groupId": tplUserGroupT.GroupId,
 	}
 	return respInfo
 }

@@ -26,7 +26,7 @@ type TplAppGroupT struct {
 /**
  * 将数据库查询出来的结果进行格式组装成request请求需要的json字段格式
  */
-func (tplAppGroupT *TplAppGroupT) tplAppGroupTToRespDesc() interface{} {
+func (tplAppGroupT *TplAppGroupT) AppGroupTToRespDesc() interface{} {
 	respInfo := map[string]interface{}{
 		"id":                  tplAppGroupT.Id,
 		"code":                tplAppGroupT.Code,

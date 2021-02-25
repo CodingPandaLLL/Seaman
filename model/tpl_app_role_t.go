@@ -22,7 +22,7 @@ type TplAppRoleT struct {
 /**
  * 将数据库查询出来的结果进行格式组装成request请求需要的json字段格式
  */
-func (tplAppRoleT *TplAppRoleT) tplAppRoleTToRespDesc() interface{} {
+func (tplAppRoleT *TplAppRoleT) AppRoleTToRespDesc() interface{} {
 	respInfo := map[string]interface{}{
 		"id":               tplAppRoleT.Id,
 		"name":             tplAppRoleT.Name,

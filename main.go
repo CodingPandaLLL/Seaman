@@ -77,7 +77,7 @@ func mvcHandle(app *iris.Application) {
 	//安全模块功能
 	securityService := service.NewSecurityService(engine)
 
-	admin := mvc.New(app.Party("/services/security"))
+	admin := mvc.New(app.Party("/service/security"))
 	admin.Register(
 		securityService,
 		sessManager.Start,
@@ -86,12 +86,57 @@ func mvcHandle(app *iris.Application) {
 
 	//用户功能模块
 	userService := service.NewUserService(engine)
-	user := mvc.New(app.Party("/services/security/user"))
+	user := mvc.New(app.Party("/service/user"))
 	user.Register(
 		userService,
 		sessManager.Start,
 	)
 	user.Handle(new(controller.UserController))
+
+	//组织机构功能模块
+	orgService := service.NewOrgService(engine)
+	org := mvc.New(app.Party("/service/org"))
+	org.Register(
+		orgService,
+		sessManager.Start,
+	)
+	org.Handle(new(controller.OrgController))
+
+	//角色功能模块
+	appRoleService := service.NewAppRoleService(engine)
+	appRole := mvc.New(app.Party("/service/appRole"))
+	appRole.Register(
+		appRoleService,
+		sessManager.Start,
+	)
+	appRole.Handle(new(controller.AppRoleController))
+
+	//群组功能模块
+	appGroupService := service.NewAppGroupService(engine)
+	appGroup := mvc.New(app.Party("/service/appGroup"))
+	appGroup.Register(
+		appGroupService,
+		sessManager.Start,
+	)
+	appGroup.Handle(new(controller.AppGroupController))
+
+	//项目功能模块
+	projectService := service.NewProjectService(engine)
+	project := mvc.New(app.Party("/service/project"))
+	project.Register(
+		projectService,
+		sessManager.Start,
+	)
+	project.Handle(new(controller.ProjectController))
+
+	//项目文件功能模块
+	projectFileService := service.NewProjectFileService(engine)
+	projectFile := mvc.New(app.Party("/service/projectFile"))
+	projectFile.Register(
+		projectFileService,
+		sessManager.Start,
+	)
+	projectFile.Handle(new(controller.ProjectFileController))
 
 }
 

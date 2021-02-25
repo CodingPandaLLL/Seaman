@@ -8,57 +8,53 @@ import (
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/kataras/iris/v12/sessions"
 	"strconv"
-	"time"
 )
 
-//每一页最大的内容
-const MaxLimit = 50
-
 /**
- * 用户控制器结构体：用来实现处理用户模块的接口的请求，并返回给客户端
+ * 组织机构控制器结构体：用来实现处理组织机构模块的接口的请求，并返回给客户端
  */
-type UserController struct {
+type OrgController struct {
 	//上下文对象
 	Ctx iris.Context
-	//user service
-	UserService service.UserService
+
+	OrgService service.OrgService
 	//session对象
 	Session *sessions.Session
 }
 
-func (uc *UserController) BeforeActivation(a mvc.BeforeActivation) {
+func (oc *OrgController) BeforeActivation(a mvc.BeforeActivation) {
 
-	//添加用户
-	a.Handle("POST", "/", "PostAddUser")
+	//添加组织机构
+	a.Handle("POST", "/", "PostAddOrg")
 
-	//删除用户
-	a.Handle("DELETE", "/{id}", "DeleteUser")
+	//删除组织机构
+	a.Handle("DELETE", "/{id}", "DeleteOrg")
 
-	//查询用户
-	a.Handle("GET", "single/{id}", "GetUser")
+	//查询组织机构
+	a.Handle("GET", "single/{id}", "GetOrg")
 
-	//查询用户数量
+	//查询组织机构数量
 	a.Handle("GET", "/count", "GetCount")
 
-	//所有用户列表
+	//所有组织机构列表
 	a.Handle("GET", "/list", "GetList")
 
-	//带参数查询用户分页
+	//带参数查询组织机构分页
 	a.Handle("GET", "/pageList", "GetPageList")
 
-	//修改用户
-	a.Handle("PUT", "/", "UpdateUser")
+	//修改组织机构
+	a.Handle("PUT", "/", "UpdateOrg")
 }
 
 /**
- * url: /user/adduser
+ * url: /org/addorg
  * type：post
- * descs：添加用户
+ * descs：添加组织机构
  */
-func (uc *UserController) PostAddUser() mvc.Result {
+func (oc *OrgController) PostAddOrg() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var org model.TplOrgT
+	err := oc.Ctx.ReadJSON(&org)
 
 	if err != nil {
 		return mvc.Response{
@@ -69,30 +65,16 @@ func (uc *UserController) PostAddUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Phone:          user.Phone,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		Password:       user.Password,
-		Defaultin:      user.Defaultin,
-		Organization:   user.Organization,
-		TenantId:       user.TenantId,
-		AppName:        user.AppName,
-		AppScope:       user.AppScope,
-		CreateDate:     time.Now(),
-		LastUpdateDate: time.Now(),
+	newOrg := &model.TplOrgT{
+		PId:     org.PId,
+		OrgName: org.OrgName,
+		OrgCode: org.OrgCode,
+		OrgNote: org.OrgNote,
+		Filed1:  org.Filed1,
+		Filed2:  org.Filed2,
+		Filed3:  org.Filed3,
 	}
-	isSuccess := uc.UserService.AddUser(newUser)
+	isSuccess := oc.OrgService.AddOrg(newOrg)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -112,13 +94,13 @@ func (uc *UserController) PostAddUser() mvc.Result {
 }
 
 /**
- * 删除用户
+ * 删除组织机构
  */
-func (uc *UserController) DeleteUser() mvc.Result {
+func (oc *OrgController) DeleteOrg() mvc.Result {
 
-	id := uc.Ctx.Params().Get("id")
+	id := oc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	orgId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -129,7 +111,8 @@ func (uc *UserController) DeleteUser() mvc.Result {
 			},
 		}
 	}
-	delete := uc.UserService.DeleteUser(userId)
+	delete := oc.OrgService.DeleteOrg(orgId)
+	delete = oc.OrgService.DeleteOrgChildren(orgId)
 	if !delete {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -150,14 +133,14 @@ func (uc *UserController) DeleteUser() mvc.Result {
 }
 
 /**
- * 获取用户
+ * 获取组织机构
  * 请求类型：Get
  */
-func (uc *UserController) GetUser() mvc.Result {
+func (oc *OrgController) GetOrg() mvc.Result {
 
-	id := uc.Ctx.Params().Get("id")
+	id := oc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	orgId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -169,7 +152,7 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	user, err := uc.UserService.GetUser(userId)
+	org, err := oc.OrgService.GetOrg(orgId)
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -180,33 +163,20 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	//返回用户
+	//返回组织机构
 	return mvc.Response{
-		Object: user.UserToRespDesc(),
+		Object: org.OrgTToRespDesc(),
 	}
 }
 
 /**
- * 获取用户数量
+ * 获取组织机构数量
  * 请求类型：Get
  */
-func (uc *UserController) GetCount() mvc.Result {
+func (oc *OrgController) GetCount() mvc.Result {
 
-	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
-	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
-	}
-	//用户总数
-	total, err := uc.UserService.GetUserTotalCount(userParam)
+	//组织机构总数
+	total, err := oc.OrgService.GetOrgTotalCount()
 
 	//请求出现错误
 	if err != nil {
@@ -228,13 +198,13 @@ func (uc *UserController) GetCount() mvc.Result {
 }
 
 /**
- * 获取用户列表
+ * 获取组织机构列表
  * 请求类型：Get
  */
-func (uc *UserController) GetList() mvc.Result {
+func (oc *OrgController) GetList() mvc.Result {
 
-	userList := uc.UserService.GetUserList()
-	if len(userList) == 0 {
+	orgList := oc.OrgService.GetOrgList()
+	if len(orgList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -243,27 +213,26 @@ func (uc *UserController) GetList() mvc.Result {
 			},
 		}
 	}
-
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的组织机构数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, org := range orgList {
+		respList = append(respList, org.OrgTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回组织机构列表
 	return mvc.Response{
 		Object: &respList,
 	}
 }
 
 /**
- * 获取用户带参数分页查询
+ * 获取组织机构带参数分页查询
  * 请求类型：Get
  */
-func (uc *UserController) GetPageList() mvc.Result {
+func (oc *OrgController) GetPageList() mvc.Result {
 
-	offsetStr := uc.Ctx.FormValue("current")
-	limitStr := uc.Ctx.FormValue("pageSize")
+	offsetStr := oc.Ctx.FormValue("current")
+	limitStr := oc.Ctx.FormValue("pageSize")
 	var offset int
 	var limit int
 
@@ -304,21 +273,14 @@ func (uc *UserController) GetPageList() mvc.Result {
 	}
 
 	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
-	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
+	pIdStr := oc.Ctx.FormValue("pId")
+	pId, err := strconv.ParseInt(pIdStr, 10, 64)
+	orgParam := &model.TplOrgT{
+		PId: pId,
 	}
-	userList := uc.UserService.GetUserPageList(userParam, offset, limit)
-	total, _ := uc.UserService.GetUserTotalCount(userParam)
-	if len(userList) == 0 {
+	orgList := oc.OrgService.GetOrgPageList(orgParam, offset, limit)
+	total, _ := oc.OrgService.GetOrgTotalCount()
+	if len(orgList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -328,13 +290,13 @@ func (uc *UserController) GetPageList() mvc.Result {
 		}
 	}
 
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的组织机构数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, org := range orgList {
+		respList = append(respList, org.OrgTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回组织机构列表
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"data":     respList,
@@ -348,12 +310,12 @@ func (uc *UserController) GetPageList() mvc.Result {
 
 /**
  * type：put
- * descs：修改用户
+ * descs：修改组织机构
  */
-func (uc *UserController) UpdateUser() mvc.Result {
+func (oc *OrgController) UpdateOrg() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var org model.TplOrgT
+	err := oc.Ctx.ReadJSON(&org)
 
 	if err != nil {
 		return mvc.Response{
@@ -364,23 +326,17 @@ func (uc *UserController) UpdateUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Id:             user.Id,
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		LastUpdateDate: time.Now(),
+	newOrg := &model.TplOrgT{
+		Id:      org.Id,
+		PId:     org.PId,
+		OrgName: org.OrgName,
+		OrgCode: org.OrgCode,
+		OrgNote: org.OrgNote,
+		Filed1:  org.Filed1,
+		Filed2:  org.Filed2,
+		Filed3:  org.Filed3,
 	}
-	isSuccess := uc.UserService.UpdateUser(newUser)
+	isSuccess := oc.OrgService.UpdateOrg(newOrg)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{

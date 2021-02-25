@@ -1,11 +1,13 @@
 package service
 
 import (
+	"Seaman/config"
 	"Seaman/model"
 	"crypto/md5"
 	"encoding/hex"
 	"github.com/go-xorm/xorm"
 	"github.com/kataras/iris/v12"
+	"time"
 )
 
 /**
@@ -23,13 +25,13 @@ type UserService interface {
 	GetUser(id int) (model.TplUserT, error)
 
 	//获取用户总数
-	GetUserTotalCount() (int64, error)
+	GetUserTotalCount(user *model.TplUserT) (int64, error)
 
 	//用户列表
 	GetUserList() []*model.TplUserT
 
 	//用户列表带分页
-	GetUserPageList(offset, limit int) []*model.TplUserT
+	GetUserPageList(user *model.TplUserT,offset, limit int) []*model.TplUserT
 
 	//修改用户
 	UpdateUser(model *model.TplUserT) bool
@@ -56,12 +58,22 @@ type userService struct {
  *user：用户信息
  */
 func (us *userService) AddUser(user *model.TplUserT) bool {
+
 	//对密码进行加密
-	pwd := user.Password
+	pwd := "123"
 	m := md5.New()
 	m.Write([]byte(pwd))
 	pwd = hex.EncodeToString(m.Sum(nil))
 	user.Password = pwd
+
+	//插入项目固定字段内容
+	initConfig := config.InitConfig()
+	user.AppName = initConfig.AppName
+	user.AppScope = initConfig.AppScope
+	user.TenantId = initConfig.TenantId
+	user.CreateDate = time.Now()
+	user.LastUpdateDate = time.Now()
+
 	_, err := us.Engine.Insert(user)
 	if err != nil {
 		iris.New().Logger().Info(err.Error())
@@ -96,10 +108,28 @@ func (us *userService) GetUser(userId int) (model.TplUserT, error) {
  * 请求总的用户数量
  * 返回值：总用户数量
  */
-func (uc *userService) GetUserTotalCount() (int64, error) {
+func (uc *userService) GetUserTotalCount(user *model.TplUserT) (int64, error) {
 
-	//查询del_flag 为0 的用户的总数量；del_flag:0 正常状态；del_flag:1 用户注销或者被删除
-	count, err := uc.Engine.Where(" status = ? ", 1).Count(new(model.TplUserT))
+	session := uc.Engine.Where(" 1 = ? ", 1)
+	if len(user.Account)!=0 && ""!= user.Account{
+		account := "%"+user.Account+"%"
+		session.And("account like ?",account)
+	}
+	if len(user.Lastname)!=0 && ""!= user.Lastname{
+		lastname := "%"+user.Lastname+"%"
+		session.And("lastname like ?",lastname)
+	}
+	if len(user.Defaultin)!=0 && ""!= user.Defaultin{
+		session.And("defaultin = ?",user.Defaultin)
+	}
+	if len(user.Organization)!=0 && ""!= user.Organization{
+		organization := "%"+user.Organization+"%"
+		session.And("organization like ?",organization)
+	}
+	if len(user.Status)!=0 && ""!= user.Status{
+		session.And("status like ?",user.Status)
+	}
+	count, err := session.Count(new(model.TplUserT))
 	if err != nil {
 		panic(err.Error())
 		return 0, err
@@ -128,9 +158,28 @@ func (uc *userService) GetUserList() []*model.TplUserT {
  * offset：偏移数量
  * limit：一次请求获取的数据条数
  */
-func (uc *userService) GetUserPageList(offset, limit int) []*model.TplUserT {
+func (uc *userService) GetUserPageList(user *model.TplUserT,offset, limit int) []*model.TplUserT {
 	var userList []*model.TplUserT
-	err := uc.Engine.Where("status = ?", 1).Limit(limit, offset).Find(&userList)
+	session := uc.Engine.Where("1 = ?", 1)
+	if len(user.Account)!=0 && ""!= user.Account{
+		account := "%"+user.Account+"%"
+		session.And("account like ?",account)
+	}
+	if len(user.Lastname)!=0 && ""!= user.Lastname{
+		lastname := "%"+user.Lastname+"%"
+		session.And("lastname like ?",lastname)
+	}
+	if len(user.Defaultin)!=0 && ""!= user.Defaultin{
+		session.And("defaultin = ?",user.Defaultin)
+	}
+	if len(user.Organization)!=0 && ""!= user.Organization{
+		organization := "%"+user.Organization+"%"
+		session.And("organization like ?",organization)
+	}
+	if len(user.Status)!=0 && ""!= user.Status{
+		session.And("status like ?",user.Status)
+	}
+	err := session.Limit(limit, limit*offset).Find(&userList)
 	if err != nil {
 		iris.New().Logger().Error(err.Error())
 		panic(err.Error())

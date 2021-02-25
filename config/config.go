@@ -11,6 +11,8 @@ import (
 //服务端配置
 type AppConfig struct {
 	AppName    string   `json:"app_name"`
+	AppScope    string   `json:"app_scope"`
+	TenantId    string   `json:"tenant_id"`
 	Port       string   `json:"port"`
 	StaticPath string   `json:"static_path"`
 	Mode       string   `json:"mode"`

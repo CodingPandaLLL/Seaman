@@ -20,8 +20,6 @@ func NewMysqlEngine() *xorm.Engine {
 
 	database := initConfig.DataBase
 
-	//"root:yu271400@/qfCms?charset=utf8"
-
 	dataSourceName := database.User + ":" + database.Pwd + "@tcp(" + database.Host + ")/" + database.Database + "?charset=utf8"
 
 	//数据库引擎
@@ -44,7 +42,7 @@ func NewMysqlEngine() *xorm.Engine {
 	 */
 	//Sync2是Sync的基础上优化的方法
 	err = engine.Sync2(
-		new(model.TplUserT))
+		new(model.TplUserT),new(model.TplOrgT),new(model.TplAppRoleT),new(model.TplAppGroupT),new(model.TplUserGroupT),new(model.SmProjectT),new(model.SmProjectFileT),new(model.TplFileT))
 
 	if err != nil {
 		panic(err.Error())

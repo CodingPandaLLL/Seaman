@@ -27,22 +27,23 @@ type TplOrgT struct {
 /**
  * 将数据库查询出来的结果进行格式组装成request请求需要的json字段格式
  */
-func (tplOrgT *TplOrgT) tplOrgTToRespDesc() interface{} {
+func (tplOrgT *TplOrgT) OrgTToRespDesc() interface{} {
 	respInfo := map[string]interface{}{
-		"id":                  tplOrgT.Id,
-		"p_id":                tplOrgT.PId,
-		"org_name":            tplOrgT.OrgName,
-		"org_code":            tplOrgT.OrgCode,
-		"filed1":              tplOrgT.Filed1,
-		"filed2":              tplOrgT.Filed2,
-		"filed3":              tplOrgT.Filed3,
-		"tenant_id":           tplOrgT.TenantId,
-		"app_name":            tplOrgT.AppName,
-		"app_scope":           tplOrgT.AppScope,
-		"create_date":         utils.FormatDatetime(tplOrgT.CreateDate),
-		"last_update_date":    utils.FormatDatetime(tplOrgT.LastUpdateDate),
-		"create_user_id":      tplOrgT.CreateUserId,
-		"last_update_user_id": tplOrgT.LastUpdateUserId,
+		"id":               tplOrgT.Id,
+		"pId":              tplOrgT.PId,
+		"orgName":          tplOrgT.OrgName,
+		"orgCode":          tplOrgT.OrgCode,
+		"orgNote":          tplOrgT.OrgNote,
+		"filed1":           tplOrgT.Filed1,
+		"filed2":           utils.FormatDatetime(tplOrgT.Filed2),
+		"filed3":           tplOrgT.Filed3,
+		"tenantId":         tplOrgT.TenantId,
+		"appName":          tplOrgT.AppName,
+		"appScope":         tplOrgT.AppScope,
+		"createDate":       utils.FormatDatetime(tplOrgT.CreateDate),
+		"lastUpdateDate":   utils.FormatDatetime(tplOrgT.LastUpdateDate),
+		"createUserId":     tplOrgT.CreateUserId,
+		"lastUpdateUserId": tplOrgT.LastUpdateUserId,
 	}
 	return respInfo
 }

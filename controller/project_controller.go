@@ -11,54 +11,51 @@ import (
 	"time"
 )
 
-//每一页最大的内容
-const MaxLimit = 50
-
 /**
- * 用户控制器结构体：用来实现处理用户模块的接口的请求，并返回给客户端
+ * 项目控制器结构体：用来实现处理项目模块的接口的请求，并返回给客户端
  */
-type UserController struct {
+type ProjectController struct {
 	//上下文对象
 	Ctx iris.Context
-	//user service
-	UserService service.UserService
+	//project service
+	ProjectService service.ProjectService
 	//session对象
 	Session *sessions.Session
 }
 
-func (uc *UserController) BeforeActivation(a mvc.BeforeActivation) {
+func (uc *ProjectController) BeforeActivation(a mvc.BeforeActivation) {
 
-	//添加用户
-	a.Handle("POST", "/", "PostAddUser")
+	//添加项目
+	a.Handle("POST", "/", "PostAddProject")
 
-	//删除用户
-	a.Handle("DELETE", "/{id}", "DeleteUser")
+	//删除项目
+	a.Handle("DELETE", "/{id}", "DeleteProject")
 
-	//查询用户
-	a.Handle("GET", "single/{id}", "GetUser")
+	//查询项目
+	a.Handle("GET", "single/{id}", "GetProject")
 
-	//查询用户数量
+	//查询项目数量
 	a.Handle("GET", "/count", "GetCount")
 
-	//所有用户列表
+	//所有项目列表
 	a.Handle("GET", "/list", "GetList")
 
-	//带参数查询用户分页
+	//带参数查询项目分页
 	a.Handle("GET", "/pageList", "GetPageList")
 
-	//修改用户
-	a.Handle("PUT", "/", "UpdateUser")
+	//修改项目
+	a.Handle("PUT", "/", "UpdateProject")
 }
 
 /**
- * url: /user/adduser
+ * url: /project/addproject
  * type：post
- * descs：添加用户
+ * descs：添加项目
  */
-func (uc *UserController) PostAddUser() mvc.Result {
+func (uc *ProjectController) PostAddProject() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var project model.SmProjectT
+	err := uc.Ctx.ReadJSON(&project)
 
 	if err != nil {
 		return mvc.Response{
@@ -69,30 +66,35 @@ func (uc *UserController) PostAddUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Phone:          user.Phone,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		Password:       user.Password,
-		Defaultin:      user.Defaultin,
-		Organization:   user.Organization,
-		TenantId:       user.TenantId,
-		AppName:        user.AppName,
-		AppScope:       user.AppScope,
-		CreateDate:     time.Now(),
-		LastUpdateDate: time.Now(),
+
+	currentUserId, sessionErr := uc.Session.GetInt64(CURRENTUSERID)
+
+	//解析失败
+	if sessionErr != nil {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_UNLOGIN,
+				"type":    utils.EEROR_UNLOGIN,
+				"message": utils.Recode2Text(utils.EEROR_UNLOGIN),
+			},
+		}
 	}
-	isSuccess := uc.UserService.AddUser(newUser)
+
+	newProject := &model.SmProjectT{
+		ProjectCode:      project.ProjectCode,
+		ProjectName:      project.ProjectName,
+		ProjectDesc:      project.ProjectDesc,
+		Status:           project.Status,
+		TenantId:         project.TenantId,
+		AppName:          project.AppName,
+		AppScope:         project.AppScope,
+		CreateDate:       time.Now(),
+		LastUpdateDate:   time.Now(),
+		CreateUserId:     strconv.Itoa(int(currentUserId)),
+		LastUpdateUserId: strconv.Itoa(int(currentUserId)),
+		Revision:         1,
+	}
+	isSuccess := uc.ProjectService.AddProject(newProject)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -112,13 +114,13 @@ func (uc *UserController) PostAddUser() mvc.Result {
 }
 
 /**
- * 删除用户
+ * 删除项目
  */
-func (uc *UserController) DeleteUser() mvc.Result {
+func (uc *ProjectController) DeleteProject() mvc.Result {
 
 	id := uc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	projectId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -129,7 +131,7 @@ func (uc *UserController) DeleteUser() mvc.Result {
 			},
 		}
 	}
-	delete := uc.UserService.DeleteUser(userId)
+	delete := uc.ProjectService.DeleteProject(projectId)
 	if !delete {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -150,14 +152,14 @@ func (uc *UserController) DeleteUser() mvc.Result {
 }
 
 /**
- * 获取用户
+ * 获取项目
  * 请求类型：Get
  */
-func (uc *UserController) GetUser() mvc.Result {
+func (uc *ProjectController) GetProject() mvc.Result {
 
 	id := uc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	projectId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -169,7 +171,7 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	user, err := uc.UserService.GetUser(userId)
+	project, err := uc.ProjectService.GetProject(projectId)
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -180,33 +182,25 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	//返回用户
+	//返回项目
 	return mvc.Response{
-		Object: user.UserToRespDesc(),
+		Object: project.ProjectTToRespDesc(),
 	}
 }
 
 /**
- * 获取用户数量
+ * 获取项目数量
  * 请求类型：Get
  */
-func (uc *UserController) GetCount() mvc.Result {
+func (uc *ProjectController) GetCount() mvc.Result {
 
 	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
-	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
+	name := uc.Ctx.FormValue("name")
+	projectParam := &model.SmProjectT{
+		ProjectName: name,
 	}
-	//用户总数
-	total, err := uc.UserService.GetUserTotalCount(userParam)
+	//项目总数
+	total, err := uc.ProjectService.GetProjectTotalCount(projectParam)
 
 	//请求出现错误
 	if err != nil {
@@ -228,13 +222,32 @@ func (uc *UserController) GetCount() mvc.Result {
 }
 
 /**
- * 获取用户列表
+ * 获取项目列表
  * 请求类型：Get
  */
-func (uc *UserController) GetList() mvc.Result {
+func (uc *ProjectController) GetList() mvc.Result {
 
-	userList := uc.UserService.GetUserList()
-	if len(userList) == 0 {
+	var project model.SmProjectT
+	err := uc.Ctx.ReadJSON(&project)
+
+	if err != nil {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_UPDATE,
+				"message": utils.Recode2Text(utils.RESPMSG_ERROR_UPDATE),
+			},
+		}
+	}
+	newProject := &model.SmProjectT{
+		Id:             project.Id,
+		ProjectName:    project.ProjectName,
+		ProjectCode:    project.ProjectCode,
+		ProjectDesc:    project.ProjectDesc,
+		LastUpdateDate: time.Now(),
+	}
+	projectList := uc.ProjectService.GetProjectList(newProject)
+	if len(projectList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -244,23 +257,23 @@ func (uc *UserController) GetList() mvc.Result {
 		}
 	}
 
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的项目数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, project := range projectList {
+		respList = append(respList, project.ProjectTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回项目列表
 	return mvc.Response{
 		Object: &respList,
 	}
 }
 
 /**
- * 获取用户带参数分页查询
+ * 获取项目带参数分页查询
  * 请求类型：Get
  */
-func (uc *UserController) GetPageList() mvc.Result {
+func (uc *ProjectController) GetPageList() mvc.Result {
 
 	offsetStr := uc.Ctx.FormValue("current")
 	limitStr := uc.Ctx.FormValue("pageSize")
@@ -304,21 +317,17 @@ func (uc *UserController) GetPageList() mvc.Result {
 	}
 
 	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
+	projectName := uc.Ctx.FormValue("projectName")
+	projectCode := uc.Ctx.FormValue("projectCode")
 	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
+	projectParam := &model.SmProjectT{
+		ProjectName: projectName,
+		ProjectCode: projectCode,
+		Status:      status,
 	}
-	userList := uc.UserService.GetUserPageList(userParam, offset, limit)
-	total, _ := uc.UserService.GetUserTotalCount(userParam)
-	if len(userList) == 0 {
+	projectList := uc.ProjectService.GetProjectPageList(projectParam, offset, limit)
+	total, _ := uc.ProjectService.GetProjectTotalCount(projectParam)
+	if len(projectList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -328,13 +337,13 @@ func (uc *UserController) GetPageList() mvc.Result {
 		}
 	}
 
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的项目数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, project := range projectList {
+		respList = append(respList, project.ProjectTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回项目列表
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"data":     respList,
@@ -348,12 +357,12 @@ func (uc *UserController) GetPageList() mvc.Result {
 
 /**
  * type：put
- * descs：修改用户
+ * descs：修改项目
  */
-func (uc *UserController) UpdateUser() mvc.Result {
+func (uc *ProjectController) UpdateProject() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var project model.SmProjectT
+	err := uc.Ctx.ReadJSON(&project)
 
 	if err != nil {
 		return mvc.Response{
@@ -364,23 +373,30 @@ func (uc *UserController) UpdateUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Id:             user.Id,
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		LastUpdateDate: time.Now(),
+
+	currentUserId, sessionErr := uc.Session.GetInt64(CURRENTUSERID)
+
+	//解析失败
+	if sessionErr != nil {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_UNLOGIN,
+				"type":    utils.EEROR_UNLOGIN,
+				"message": utils.Recode2Text(utils.EEROR_UNLOGIN),
+			},
+		}
 	}
-	isSuccess := uc.UserService.UpdateUser(newUser)
+
+	newProject := &model.SmProjectT{
+		Id:             project.Id,
+		ProjectName:    project.ProjectName,
+		ProjectCode:    project.ProjectCode,
+		ProjectDesc:    project.ProjectDesc,
+		Status:         project.Status,
+		LastUpdateDate: time.Now(),
+		LastUpdateUserId: strconv.Itoa(int(currentUserId)),
+	}
+	isSuccess := uc.ProjectService.UpdateProject(newProject)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{

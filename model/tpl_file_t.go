@@ -26,22 +26,23 @@ type TplFileT struct {
 /**
  * 将数据库查询出来的结果进行格式组装成request请求需要的json字段格式
  */
-func (tplFileT *TplFileT) tplFileTToRespDesc() interface{} {
+func (tplFileT *TplFileT) FileTToRespDesc() interface{} {
 	respInfo := map[string]interface{}{
-		"id":                  tplFileT.Id,
-		"batch_no":            tplFileT.BatchNo,
-		"file_path":           tplFileT.FilePath,
-		"file_size":           tplFileT.FileSize,
-		"file_uid":            tplFileT.FileUid,
-		"attach_type":         tplFileT.AttachType,
-		"revision":            tplFileT.Revision,
-		"tenant_id":           tplFileT.TenantId,
-		"app_name":            tplFileT.AppName,
-		"app_scope":           tplFileT.AppScope,
-		"create_date":         utils.FormatDatetime(tplFileT.CreateDate),
-		"last_update_date":    utils.FormatDatetime(tplFileT.LastUpdateDate),
-		"create_user_id":      tplFileT.CreateUserId,
-		"last_update_user_id": tplFileT.LastUpdateUserId,
+		"id":               tplFileT.Id,
+		"batchNo":          tplFileT.BatchNo,
+		"filePath":         tplFileT.FilePath,
+		"fileName":         tplFileT.FileName,
+		"fileSize":         tplFileT.FileSize,
+		"fileUid":          tplFileT.FileUid,
+		"attachType":       tplFileT.AttachType,
+		"revision":         tplFileT.Revision,
+		"tenantId":         tplFileT.TenantId,
+		"appName":          tplFileT.AppName,
+		"appScope":         tplFileT.AppScope,
+		"createDate":       utils.FormatDatetime(tplFileT.CreateDate),
+		"lastUpdateDate":   utils.FormatDatetime(tplFileT.LastUpdateDate),
+		"createUserId":     tplFileT.CreateUserId,
+		"lastUpdateUserId": tplFileT.LastUpdateUserId,
 	}
 	return respInfo
 }

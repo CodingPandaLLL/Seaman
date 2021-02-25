@@ -5,60 +5,64 @@ import (
 	"Seaman/service"
 	"Seaman/utils"
 	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/kataras/iris/v12/sessions"
+	"path/filepath"
 	"strconv"
-	"time"
 )
 
-//每一页最大的内容
-const MaxLimit = 50
-
 /**
- * 用户控制器结构体：用来实现处理用户模块的接口的请求，并返回给客户端
+ * 项目文件控制器结构体：用来实现处理项目文件模块的接口的请求，并返回给客户端
  */
-type UserController struct {
+type ProjectFileController struct {
 	//上下文对象
 	Ctx iris.Context
-	//user service
-	UserService service.UserService
+	//projectFile service
+	ProjectFileService service.ProjectFileService
 	//session对象
 	Session *sessions.Session
 }
 
-func (uc *UserController) BeforeActivation(a mvc.BeforeActivation) {
+func (uc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
 
-	//添加用户
-	a.Handle("POST", "/", "PostAddUser")
+	//添加项目文件
+	a.Handle("POST", "/", "PostAddProjectFile")
 
-	//删除用户
-	a.Handle("DELETE", "/{id}", "DeleteUser")
+	//删除项目文件
+	a.Handle("DELETE", "/{id}", "DeleteProjectFile")
 
-	//查询用户
-	a.Handle("GET", "single/{id}", "GetUser")
+	//查询项目文件
+	a.Handle("GET", "single/{id}", "GetProjectFile")
 
-	//查询用户数量
+	//查询项目文件数量
 	a.Handle("GET", "/count", "GetCount")
 
-	//所有用户列表
+	//所有项目文件列表
 	a.Handle("GET", "/list", "GetList")
 
-	//带参数查询用户分页
+	//带参数查询项目文件分页
 	a.Handle("GET", "/pageList", "GetPageList")
 
-	//修改用户
-	a.Handle("PUT", "/", "UpdateUser")
+	//修改项目文件
+	a.Handle("PUT", "/", "UpdateProjectFile")
+
+	//浏览项目文件图片文件
+	a.Handle("GET", "image/{id}", "GetImage")
+
+	//下载项目文件
+	a.Handle("GET", "file/{id}", "GetFile")
 }
 
 /**
- * url: /user/adduser
+ * url: /projectFile/addprojectFile
  * type：post
- * descs：添加用户
+ * desc：添加项目文件
  */
-func (uc *UserController) PostAddUser() mvc.Result {
+func (uc *ProjectFileController) PostAddProjectFile() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var projectFile model.SmProjectFileT
+	err := uc.Ctx.ReadJSON(&projectFile)
 
 	if err != nil {
 		return mvc.Response{
@@ -69,30 +73,12 @@ func (uc *UserController) PostAddUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Phone:          user.Phone,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		Password:       user.Password,
-		Defaultin:      user.Defaultin,
-		Organization:   user.Organization,
-		TenantId:       user.TenantId,
-		AppName:        user.AppName,
-		AppScope:       user.AppScope,
-		CreateDate:     time.Now(),
-		LastUpdateDate: time.Now(),
+
+
+	newProjectFile := &model.SmProjectFileT{
+
 	}
-	isSuccess := uc.UserService.AddUser(newUser)
+	isSuccess := uc.ProjectFileService.AddProjectFile(newProjectFile)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -112,13 +98,13 @@ func (uc *UserController) PostAddUser() mvc.Result {
 }
 
 /**
- * 删除用户
+ * 删除项目文件
  */
-func (uc *UserController) DeleteUser() mvc.Result {
+func (uc *ProjectFileController) DeleteProjectFile() mvc.Result {
 
 	id := uc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	projectFileId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -129,7 +115,7 @@ func (uc *UserController) DeleteUser() mvc.Result {
 			},
 		}
 	}
-	delete := uc.UserService.DeleteUser(userId)
+	delete := uc.ProjectFileService.DeleteProjectFile(projectFileId)
 	if !delete {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -150,14 +136,14 @@ func (uc *UserController) DeleteUser() mvc.Result {
 }
 
 /**
- * 获取用户
+ * 获取项目文件
  * 请求类型：Get
  */
-func (uc *UserController) GetUser() mvc.Result {
+func (uc *ProjectFileController) GetProjectFile() mvc.Result {
 
 	id := uc.Ctx.Params().Get("id")
 
-	userId, err := strconv.Atoi(id)
+	projectFileId, err := strconv.Atoi(id)
 
 	if err != nil {
 		return mvc.Response{
@@ -169,7 +155,7 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	user, err := uc.UserService.GetUser(userId)
+	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -180,33 +166,24 @@ func (uc *UserController) GetUser() mvc.Result {
 		}
 	}
 
-	//返回用户
+	//返回项目文件
 	return mvc.Response{
-		Object: user.UserToRespDesc(),
+		Object: projectFile.FileTToRespDesc(),
 	}
 }
 
 /**
- * 获取用户数量
+ * 获取项目文件数量
  * 请求类型：Get
  */
-func (uc *UserController) GetCount() mvc.Result {
+func (uc *ProjectFileController) GetCount() mvc.Result {
 
 	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
-	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
+	//name := uc.Ctx.FormValue("name")
+	projectFileParam := &model.SmProjectFileT{
 	}
-	//用户总数
-	total, err := uc.UserService.GetUserTotalCount(userParam)
+	//项目文件总数
+	total, err := uc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
 
 	//请求出现错误
 	if err != nil {
@@ -228,13 +205,27 @@ func (uc *UserController) GetCount() mvc.Result {
 }
 
 /**
- * 获取用户列表
+ * 获取项目文件列表
  * 请求类型：Get
  */
-func (uc *UserController) GetList() mvc.Result {
+func (uc *ProjectFileController) GetList() mvc.Result {
 
-	userList := uc.UserService.GetUserList()
-	if len(userList) == 0 {
+	projectId := uc.Ctx.FormValue("id")
+	IProjectId,err := strconv.Atoi(projectId)
+	if err!=nil {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_QUERY,
+				"message": utils.Recode2Text(utils.RESPMSG_ERROR_QUERY),
+			},
+		}
+	}
+	newProjectFile := &model.SmProjectFileT{
+		ProjectId:int64(IProjectId),
+	}
+	projectFileList := uc.ProjectFileService.GetProjectFileList(newProjectFile)
+	if len(projectFileList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -244,23 +235,23 @@ func (uc *UserController) GetList() mvc.Result {
 		}
 	}
 
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的项目文件数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, projectFile := range projectFileList {
+		respList = append(respList, projectFile.FileTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回项目文件列表
 	return mvc.Response{
 		Object: &respList,
 	}
 }
 
 /**
- * 获取用户带参数分页查询
+ * 获取项目文件带参数分页查询
  * 请求类型：Get
  */
-func (uc *UserController) GetPageList() mvc.Result {
+func (uc *ProjectFileController) GetPageList() mvc.Result {
 
 	offsetStr := uc.Ctx.FormValue("current")
 	limitStr := uc.Ctx.FormValue("pageSize")
@@ -304,21 +295,15 @@ func (uc *UserController) GetPageList() mvc.Result {
 	}
 
 	//获取页面参数
-	account := uc.Ctx.FormValue("account")
-	lastname := uc.Ctx.FormValue("lastname")
-	organization := uc.Ctx.FormValue("organization")
-	defaultin := uc.Ctx.FormValue("defaultin")
-	status := uc.Ctx.FormValue("status")
-	userParam := &model.TplUserT{
-		Account:      account,
-		Lastname:     lastname,
-		Defaultin:    defaultin,
-		Organization: organization,
-		Status: status,
+	//projectFileName := uc.Ctx.FormValue("projectFileName")
+	//projectFileCode := uc.Ctx.FormValue("projectFileCode")
+	//status := uc.Ctx.FormValue("status")
+	projectFileParam := &model.SmProjectFileT{
+
 	}
-	userList := uc.UserService.GetUserPageList(userParam, offset, limit)
-	total, _ := uc.UserService.GetUserTotalCount(userParam)
-	if len(userList) == 0 {
+	projectFileList := uc.ProjectFileService.GetProjectFilePageList(projectFileParam, offset, limit)
+	total, _ := uc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
+	if len(projectFileList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -328,13 +313,13 @@ func (uc *UserController) GetPageList() mvc.Result {
 		}
 	}
 
-	//将查询到的用户数据进行转换成前端需要的内容
+	//将查询到的项目文件数据进行转换成前端需要的内容
 	var respList []interface{}
-	for _, user := range userList {
-		respList = append(respList, user.UserToRespDesc())
+	for _, projectFile := range projectFileList {
+		respList = append(respList, projectFile.ProjectFileTToRespDesc())
 	}
 
-	//返回用户列表
+	//返回项目文件列表
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"data":     respList,
@@ -348,12 +333,12 @@ func (uc *UserController) GetPageList() mvc.Result {
 
 /**
  * type：put
- * descs：修改用户
+ * descs：修改项目文件
  */
-func (uc *UserController) UpdateUser() mvc.Result {
+func (uc *ProjectFileController) UpdateProjectFile() mvc.Result {
 
-	var user model.TplUserT
-	err := uc.Ctx.ReadJSON(&user)
+	var projectFile model.SmProjectFileT
+	err := uc.Ctx.ReadJSON(&projectFile)
 
 	if err != nil {
 		return mvc.Response{
@@ -364,23 +349,11 @@ func (uc *UserController) UpdateUser() mvc.Result {
 			},
 		}
 	}
-	newUser := &model.TplUserT{
-		Id:             user.Id,
-		Account:        user.Account,
-		Email:          user.Email,
-		Firstname:      user.Firstname,
-		Lastname:       user.Lastname,
-		Status:         user.Status,
-		Addr1:          user.Addr1,
-		Addr2:          user.Addr2,
-		City:           user.City,
-		State:          user.State,
-		Zip:            user.Zip,
-		Country:        user.Country,
-		LanguageCode:   user.LanguageCode,
-		LastUpdateDate: time.Now(),
+
+	newProjectFile := &model.SmProjectFileT{
+
 	}
-	isSuccess := uc.UserService.UpdateUser(newUser)
+	isSuccess := uc.ProjectFileService.UpdateProjectFile(newProjectFile)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -397,4 +370,59 @@ func (uc *UserController) UpdateUser() mvc.Result {
 			"success": utils.Recode2Text(utils.RESPMSG_SUCCESS_UPDATE),
 		},
 	}
+}
+
+/**
+ * 获取项目文件图片
+ * 请求类型：Get
+ */
+func (uc *ProjectFileController) GetImage(ctx context.Context) {
+
+	id := uc.Ctx.Params().Get("id")
+
+	projectFileId, err := strconv.Atoi(id)
+
+	if err != nil {
+		iris.New().Logger().Info(err)
+	}
+
+	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
+	if err != nil {
+		iris.New().Logger().Info(err)
+	}
+	//拼接路径
+	path := filepath.Join(projectFile.FilePath, projectFile.FileName)
+
+	//下载图片
+	//ctx.SendFile("C:\\Users\\lllzj\\Desktop\\pic\\2.jpg","2.jpg")
+
+	//浏览图片
+	ctx.ServeFile(path,false)
+}
+
+/**
+ * 获取项目文件图片
+ * 请求类型：Get
+ */
+func (uc *ProjectFileController) GetFile(ctx context.Context) {
+
+	id := uc.Ctx.Params().Get("id")
+
+	projectFileId, err := strconv.Atoi(id)
+
+	if err != nil {
+		iris.New().Logger().Info(err)
+	}
+
+	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
+	if err != nil {
+		iris.New().Logger().Info(err)
+	}
+	//拼接路径
+	path := filepath.Join(projectFile.FilePath, projectFile.FileName)
+
+	//下载图片
+	ctx.SendFile(path,projectFile.FileName)
+
+
 }

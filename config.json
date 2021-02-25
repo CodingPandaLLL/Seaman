@@ -1,5 +1,7 @@
 {
   "app_name": "Seaman",
+  "app_scope": "",
+  "tenant_id": "",
   "port": "80",
   "static_path": "/manage/static",
   "data_base": {
