@@ -17,6 +17,7 @@ type AppConfig struct {
 	StaticPath string   `json:"static_path"`
 	Mode       string   `json:"mode"`
 	DataBase   DataBase `json:"data_base"`
+	Session    Session   `json:"session"`
 }
 
 /**
@@ -29,6 +30,14 @@ type DataBase struct {
 	Pwd      string `json:"pwd"`
 	Host     string `json:"host"`
 	Database string `json:"database"`
+}
+
+/*
+ * session配置
+ */
+type Session struct {
+	CurrentUserName    string `json:"currentUserName"`
+	CurrentUserId     string `json:"currentUserId"`
 }
 
 //初始化服务器配置

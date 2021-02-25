@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Seaman/config"
 	"Seaman/model"
 	"Seaman/service"
 	"Seaman/utils"
@@ -66,8 +67,8 @@ func (uc *ProjectController) PostAddProject() mvc.Result {
 			},
 		}
 	}
-
-	currentUserId, sessionErr := uc.Session.GetInt64(CURRENTUSERID)
+	initConfig := config.InitConfig()
+	currentUserId, sessionErr := uc.Session.GetInt64(initConfig.Session.CurrentUserId)
 
 	//解析失败
 	if sessionErr != nil {
@@ -373,8 +374,8 @@ func (uc *ProjectController) UpdateProject() mvc.Result {
 			},
 		}
 	}
-
-	currentUserId, sessionErr := uc.Session.GetInt64(CURRENTUSERID)
+	initConfig := config.InitConfig()
+	currentUserId, sessionErr := uc.Session.GetInt64(initConfig.Session.CurrentUserId)
 
 	//解析失败
 	if sessionErr != nil {

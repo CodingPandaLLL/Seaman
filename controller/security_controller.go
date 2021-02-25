@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Seaman/config"
 	"Seaman/model"
 	"Seaman/service"
 	"Seaman/utils"
@@ -27,11 +28,6 @@ type SecurityController struct {
 	Session *sessions.Session
 }
 
-const (
-	CURRENTUSERNAME = "userName"
-	CURRENTUSERID    = "userId"
-)
-
 type AdminLogin struct {
 	Username string `json:"userName"`
 	Password string `json:"password"`
@@ -49,8 +45,9 @@ func (ac *SecurityController) BeforeActivation(a mvc.BeforeActivation) {
  */
 func (ac *SecurityController) GetSingout() mvc.Result {
 
+	initConfig := config.InitConfig()
 	//删除session，下次需要从新登录
-	ac.Session.Delete(CURRENTUSERID)
+	ac.Session.Delete(initConfig.Session.CurrentUserId)
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"status":  utils.RECODE_OK,
@@ -92,9 +89,9 @@ func (ac *SecurityController) GetCount() mvc.Result {
  * 请求url：/admin/info
  */
 func (ac *SecurityController) GetCurrentUser() mvc.Result {
-
+	initConfig := config.InitConfig()
 	//从session中获取信息
-	currentUser:=ac.Session.Get(CURRENTUSERID)
+	currentUser:=ac.Session.Get(initConfig.Session.CurrentUserId)
 	//session为空
 	if currentUser == nil {
 		return mvc.Response{
@@ -112,7 +109,7 @@ func (ac *SecurityController) GetCurrentUser() mvc.Result {
 	//jsonStr := "" + userByte.(string) + ""
 	//admin = model.Decoder([]byte(jsonStr))
 
-	currentUserId, err := ac.Session.GetInt64(CURRENTUSERID)
+	currentUserId, err := ac.Session.GetInt64(initConfig.Session.CurrentUserId)
 
 	//解析失败
 	if err != nil {
@@ -189,10 +186,11 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 
 	//管理员存在 设置session
 	//userByte := admin.Encoder()
-	ac.Session.Set(CURRENTUSERID, user.Id)
-	//ac.Session.Increment(CURRENTUSERID, int(user.Id))
+	initConfig := config.InitConfig()
+	ac.Session.Set(initConfig.Session.CurrentUserId, user.Id)
+	//ac.Session.Increment(initConfig.Session.CurrentUserId, int(user.Id))
 
-	fmt.Print(ac.Session.Get(CURRENTUSERID))
+	fmt.Print(ac.Session.Get(initConfig.Session.CurrentUserId))
 	resultUser := new(model.LoginUser)
 	resultUser.UserId = user.Id
 	return mvc.Response{

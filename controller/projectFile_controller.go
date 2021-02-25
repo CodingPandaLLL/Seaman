@@ -1,15 +1,20 @@
 package controller
 
 import (
+	"Seaman/config"
 	"Seaman/model"
 	"Seaman/service"
 	"Seaman/utils"
+	uuid "github.com/iris-contrib/go.uuid"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/context"
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/kataras/iris/v12/sessions"
+	"io"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 /**
@@ -24,10 +29,10 @@ type ProjectFileController struct {
 	Session *sessions.Session
 }
 
-func (uc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
+func (pc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
 
 	//添加项目文件
-	a.Handle("POST", "/", "PostAddProjectFile")
+	a.Handle("POST", "/{projectId}", "PostAddProjectFile")
 
 	//删除项目文件
 	a.Handle("DELETE", "/{id}", "DeleteProjectFile")
@@ -59,26 +64,90 @@ func (uc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
  * type：post
  * desc：添加项目文件
  */
-func (uc *ProjectFileController) PostAddProjectFile() mvc.Result {
+func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
+	//获取项目ID
+	projectId, err := pc.Ctx.Params().GetInt64("projectId")
+	if err != nil {
+		iris.New().Logger().Info(err.Error())
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_PICTUREADD,
+				"failure": utils.Recode2Text(utils.RESPMSG_ERROR_PICTUREADD),
+			},
+		}
+	}
+	//生成uuid作为batchNo
+	batchNo := uuid.Must(uuid.NewV4()).String()
+	iris.New().Logger().Info(projectId)
+	file, info, err := pc.Ctx.FormFile("file")
+	if err != nil {
+		iris.New().Logger().Info(err.Error())
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_PICTUREADD,
+				"failure": utils.Recode2Text(utils.RESPMSG_ERROR_PICTUREADD),
+			},
+		}
+	}
+	defer file.Close()
+	fname := info.Filename
+	//获取文件的AttachType
+	fns := strings.Split(fname, ".")
+	attachType := fns[len(fns)-1]
 
-	var projectFile model.SmProjectFileT
-	err := uc.Ctx.ReadJSON(&projectFile)
-
+	//保存文件至服务器
+	out, err := os.OpenFile("./uploads/"+fname, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		iris.New().Logger().Info(err.Error())
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_PICTUREADD,
+				"failure": utils.Recode2Text(utils.RESPMSG_ERROR_PICTUREADD),
+			},
+		}
+	}
+	iris.New().Logger().Info("文件路径：" + out.Name())
+	defer out.Close()
+	_, err = io.Copy(out, file)
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
-				"type":    utils.RESPMSG_ERROR_PARAM,
-				"message": utils.Recode2Text(utils.RESPMSG_ERROR_PARAM),
+				"type":    utils.RESPMSG_ERROR_PICTUREADD,
+				"failure": utils.Recode2Text(utils.RESPMSG_ERROR_PICTUREADD),
+			},
+		}
+	}
+	//从session中获取信息
+	initConfig := config.InitConfig()
+	currentUserId,errSession:=pc.Session.GetInt64(initConfig.Session.CurrentUserId)
+	//session为空
+	if errSession!=nil {
+		iris.New().Logger().Info("未登录....")
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_UNLOGIN,
+				"type":    utils.EEROR_UNLOGIN,
+				"message": utils.Recode2Text(utils.EEROR_UNLOGIN),
 			},
 		}
 	}
 
-
-	newProjectFile := &model.SmProjectFileT{
-
+	//保存文件信息到数据库
+	tplFile := &model.TplFileT{
+		BatchNo:    batchNo,
+		FilePath:   "/uploads/" + fname,
+		FileName:   info.Filename,
+		FileSize:   info.Size,
+		FileUid:    uuid.Must(uuid.NewV4()).String(),
+		AttachType: attachType,
+		CreateUserId: strconv.Itoa(int(currentUserId)),
+		LastUpdateUserId: strconv.Itoa(int(currentUserId)),
 	}
-	isSuccess := uc.ProjectFileService.AddProjectFile(newProjectFile)
+	isSuccess := pc.ProjectFileService.AddFile(tplFile)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -89,6 +158,21 @@ func (uc *ProjectFileController) PostAddProjectFile() mvc.Result {
 		}
 	}
 
+	//保存文件关联信息到项目文件关联表
+	newProjectFile := &model.SmProjectFileT{
+		ProjectId: projectId,
+		FileId:    tplFile.Id,
+	}
+	isSuccess = pc.ProjectFileService.AddProjectFile(newProjectFile)
+	if !isSuccess {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"type":    utils.RESPMSG_ERROR_ADD,
+				"message": utils.Recode2Text(utils.RESPMSG_ERROR_ADD),
+			},
+		}
+	}
 	return mvc.Response{
 		Object: map[string]interface{}{
 			"status":  utils.RECODE_OK,
@@ -100,12 +184,11 @@ func (uc *ProjectFileController) PostAddProjectFile() mvc.Result {
 /**
  * 删除项目文件
  */
-func (uc *ProjectFileController) DeleteProjectFile() mvc.Result {
+func (pc *ProjectFileController) DeleteProjectFile() mvc.Result {
 
-	id := uc.Ctx.Params().Get("id")
+	id := pc.Ctx.Params().Get("id")
 
 	projectFileId, err := strconv.Atoi(id)
-
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -115,7 +198,7 @@ func (uc *ProjectFileController) DeleteProjectFile() mvc.Result {
 			},
 		}
 	}
-	delete := uc.ProjectFileService.DeleteProjectFile(projectFileId)
+	delete := pc.ProjectFileService.DeleteProjectFile(projectFileId)
 	if !delete {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -139,9 +222,9 @@ func (uc *ProjectFileController) DeleteProjectFile() mvc.Result {
  * 获取项目文件
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetProjectFile() mvc.Result {
+func (pc *ProjectFileController) GetProjectFile() mvc.Result {
 
-	id := uc.Ctx.Params().Get("id")
+	id := pc.Ctx.Params().Get("id")
 
 	projectFileId, err := strconv.Atoi(id)
 
@@ -155,7 +238,7 @@ func (uc *ProjectFileController) GetProjectFile() mvc.Result {
 		}
 	}
 
-	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
+	projectFile, err := pc.ProjectFileService.GetProjectFile(projectFileId)
 	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -176,14 +259,14 @@ func (uc *ProjectFileController) GetProjectFile() mvc.Result {
  * 获取项目文件数量
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetCount() mvc.Result {
+func (pc *ProjectFileController) GetCount() mvc.Result {
 
 	//获取页面参数
-	//name := uc.Ctx.FormValue("name")
+	//name := pc.Ctx.FormValue("name")
 	projectFileParam := &model.SmProjectFileT{
 	}
 	//项目文件总数
-	total, err := uc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
+	total, err := pc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
 
 	//请求出现错误
 	if err != nil {
@@ -208,11 +291,11 @@ func (uc *ProjectFileController) GetCount() mvc.Result {
  * 获取项目文件列表
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetList() mvc.Result {
+func (pc *ProjectFileController) GetList() mvc.Result {
 
-	projectId := uc.Ctx.FormValue("id")
-	IProjectId,err := strconv.Atoi(projectId)
-	if err!=nil {
+	projectId := pc.Ctx.FormValue("id")
+	IProjectId, err := strconv.Atoi(projectId)
+	if err != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -222,9 +305,9 @@ func (uc *ProjectFileController) GetList() mvc.Result {
 		}
 	}
 	newProjectFile := &model.SmProjectFileT{
-		ProjectId:int64(IProjectId),
+		ProjectId: int64(IProjectId),
 	}
-	projectFileList := uc.ProjectFileService.GetProjectFileList(newProjectFile)
+	projectFileList := pc.ProjectFileService.GetProjectFileList(newProjectFile)
 	if len(projectFileList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -251,10 +334,10 @@ func (uc *ProjectFileController) GetList() mvc.Result {
  * 获取项目文件带参数分页查询
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetPageList() mvc.Result {
+func (pc *ProjectFileController) GetPageList() mvc.Result {
 
-	offsetStr := uc.Ctx.FormValue("current")
-	limitStr := uc.Ctx.FormValue("pageSize")
+	offsetStr := pc.Ctx.FormValue("current")
+	limitStr := pc.Ctx.FormValue("pageSize")
 	var offset int
 	var limit int
 
@@ -295,14 +378,14 @@ func (uc *ProjectFileController) GetPageList() mvc.Result {
 	}
 
 	//获取页面参数
-	//projectFileName := uc.Ctx.FormValue("projectFileName")
-	//projectFileCode := uc.Ctx.FormValue("projectFileCode")
-	//status := uc.Ctx.FormValue("status")
+	//projectFileName := pc.Ctx.FormValue("projectFileName")
+	//projectFileCode := pc.Ctx.FormValue("projectFileCode")
+	//status := pc.Ctx.FormValue("status")
 	projectFileParam := &model.SmProjectFileT{
 
 	}
-	projectFileList := uc.ProjectFileService.GetProjectFilePageList(projectFileParam, offset, limit)
-	total, _ := uc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
+	projectFileList := pc.ProjectFileService.GetProjectFilePageList(projectFileParam, offset, limit)
+	total, _ := pc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
 	if len(projectFileList) == 0 {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -335,10 +418,10 @@ func (uc *ProjectFileController) GetPageList() mvc.Result {
  * type：put
  * descs：修改项目文件
  */
-func (uc *ProjectFileController) UpdateProjectFile() mvc.Result {
+func (pc *ProjectFileController) UpdateProjectFile() mvc.Result {
 
 	var projectFile model.SmProjectFileT
-	err := uc.Ctx.ReadJSON(&projectFile)
+	err := pc.Ctx.ReadJSON(&projectFile)
 
 	if err != nil {
 		return mvc.Response{
@@ -353,7 +436,7 @@ func (uc *ProjectFileController) UpdateProjectFile() mvc.Result {
 	newProjectFile := &model.SmProjectFileT{
 
 	}
-	isSuccess := uc.ProjectFileService.UpdateProjectFile(newProjectFile)
+	isSuccess := pc.ProjectFileService.UpdateProjectFile(newProjectFile)
 	if !isSuccess {
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -376,9 +459,9 @@ func (uc *ProjectFileController) UpdateProjectFile() mvc.Result {
  * 获取项目文件图片
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetImage(ctx context.Context) {
+func (pc *ProjectFileController) GetImage(ctx context.Context) {
 
-	id := uc.Ctx.Params().Get("id")
+	id := pc.Ctx.Params().Get("id")
 
 	projectFileId, err := strconv.Atoi(id)
 
@@ -386,7 +469,7 @@ func (uc *ProjectFileController) GetImage(ctx context.Context) {
 		iris.New().Logger().Info(err)
 	}
 
-	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
+	projectFile, err := pc.ProjectFileService.GetProjectFile(projectFileId)
 	if err != nil {
 		iris.New().Logger().Info(err)
 	}
@@ -397,16 +480,16 @@ func (uc *ProjectFileController) GetImage(ctx context.Context) {
 	//ctx.SendFile("C:\\Users\\lllzj\\Desktop\\pic\\2.jpg","2.jpg")
 
 	//浏览图片
-	ctx.ServeFile(path,false)
+	ctx.ServeFile(path, false)
 }
 
 /**
  * 获取项目文件图片
  * 请求类型：Get
  */
-func (uc *ProjectFileController) GetFile(ctx context.Context) {
+func (pc *ProjectFileController) GetFile(ctx context.Context) {
 
-	id := uc.Ctx.Params().Get("id")
+	id := pc.Ctx.Params().Get("id")
 
 	projectFileId, err := strconv.Atoi(id)
 
@@ -414,7 +497,7 @@ func (uc *ProjectFileController) GetFile(ctx context.Context) {
 		iris.New().Logger().Info(err)
 	}
 
-	projectFile, err := uc.ProjectFileService.GetProjectFile(projectFileId)
+	projectFile, err := pc.ProjectFileService.GetProjectFile(projectFileId)
 	if err != nil {
 		iris.New().Logger().Info(err)
 	}
@@ -422,7 +505,6 @@ func (uc *ProjectFileController) GetFile(ctx context.Context) {
 	path := filepath.Join(projectFile.FilePath, projectFile.FileName)
 
 	//下载图片
-	ctx.SendFile(path,projectFile.FileName)
-
+	ctx.SendFile(path, projectFile.FileName)
 
 }

@@ -15,7 +15,7 @@ type TplFileT struct {
 	CreateUserId     string    `xorm:"not null comment('创建用户ID') VARCHAR(32)"`
 	CreateDate       time.Time `xorm:"comment('创建时间') DATETIME"`
 	LastUpdateUserId string    `xorm:"not null comment('最后更新用户ID') VARCHAR(32)"`
-	FileUid          string    `xorm:"comment('文件UID') VARCHAR(32)"`
+	FileUid          string    `xorm:"comment('文件UID') VARCHAR(64)"`
 	LastUpdateDate   time.Time `xorm:"comment('最后修改时间') DATETIME"`
 	AttachType       string    `xorm:"comment('附件类型') VARCHAR(32)"`
 	AppName          string    `xorm:"not null comment('应用名') VARCHAR(32)"`

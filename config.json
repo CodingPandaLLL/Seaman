@@ -12,5 +12,9 @@
     "pwd": "123456",
     "database": "seaman"
   },
+  "session": {
+    "currentUserName": "username",
+    "currentUserId": "userId"
+  },
   "mode": "dev"
 }

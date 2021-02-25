@@ -1,40 +1,46 @@
 package service
 
 import (
+	"Seaman/config"
 	"Seaman/model"
 	"github.com/go-xorm/xorm"
 	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/sessions"
+	"time"
 )
 
 /**
- * 项目模块功能服务接口
+ * 项目文件模块功能服务接口
  */
 type ProjectFileService interface {
 
-	//新增项目
+	//新增项目文件
 	AddProjectFile(model *model.SmProjectFileT) bool
 
-	//删除项目
+	//新增项目文件
+	AddFile(model *model.TplFileT) bool
+
+	//删除项目文件
 	DeleteProjectFile(id int) bool
 
-	//通过id查询项目
+	//通过id查询项目文件
 	GetProjectFile(fileId int) (model.TplFileT, error)
 
-	//获取项目总数
+	//获取项目文件总数
 	GetProjectFileTotalCount(projectFile *model.SmProjectFileT) (int64, error)
 
-	//项目列表
+	//项目文件列表
 	GetProjectFileList(projectFile *model.SmProjectFileT) []*model.TplFileT
 
-	//项目列表带分页
+	//项目文件列表带分页
 	GetProjectFilePageList(projectFile *model.SmProjectFileT, offset, limit int) []*model.SmProjectFileT
 
-	//修改项目
+	//修改项目文件
 	UpdateProjectFile(model *model.SmProjectFileT) bool
 }
 
 /**
- * 实例化项目服务结构实体对象
+ * 实例化项目文件服务结构实体对象
  */
 func NewProjectFileService(engine *xorm.Engine) ProjectFileService {
 	return &projectFileService{
@@ -43,15 +49,18 @@ func NewProjectFileService(engine *xorm.Engine) ProjectFileService {
 }
 
 /**
- * 项目服务实现结构体
+ * 项目文件服务实现结构体
  */
 type projectFileService struct {
 	Engine *xorm.Engine
+
+	//session对象
+	Session *sessions.Session
 }
 
 /**
- *新增项目
- *projectFile：项目信息
+ *新增项目文件
+ *projectFile：项目文件信息
  */
 func (pfs *projectFileService) AddProjectFile(projectFile *model.SmProjectFileT) bool {
 
@@ -63,7 +72,28 @@ func (pfs *projectFileService) AddProjectFile(projectFile *model.SmProjectFileT)
 }
 
 /**
- * 删除项目
+ *新增文件
+ *file：项目信息
+ */
+func (pfs *projectFileService) AddFile(file *model.TplFileT) bool {
+
+	//插入项目固定字段内容
+	initConfig := config.InitConfig()
+	file.AppName = initConfig.AppName
+	file.AppScope = initConfig.AppScope
+	file.TenantId = initConfig.TenantId
+	file.CreateDate = time.Now()
+	file.LastUpdateDate = time.Now()
+
+	_, err := pfs.Engine.Insert(file)
+	if err != nil {
+		iris.New().Logger().Info(err.Error())
+	}
+	return err == nil
+}
+
+/**
+ * 删除项目文件
  */
 func (pfs *projectFileService) DeleteProjectFile(projectFileId int) bool {
 
@@ -77,7 +107,7 @@ func (pfs *projectFileService) DeleteProjectFile(projectFileId int) bool {
 }
 
 /**
- *通过id查询项目
+ *通过id查询项目文件
  */
 func (pfs *projectFileService) GetProjectFile(fileId int) (model.TplFileT, error) {
 	var projectFile model.TplFileT
@@ -86,8 +116,8 @@ func (pfs *projectFileService) GetProjectFile(fileId int) (model.TplFileT, error
 }
 
 /**
- * 请求总的项目数量
- * 返回值：总项目数量
+ * 请求总的项目文件数量
+ * 返回值：总项目文件数量
  */
 func (pfs *projectFileService) GetProjectFileTotalCount(projectFile *model.SmProjectFileT) (int64, error) {
 	session := pfs.Engine.Where("1 = ?", 1)
@@ -96,12 +126,12 @@ func (pfs *projectFileService) GetProjectFileTotalCount(projectFile *model.SmPro
 		panic(err.Error())
 		return 0, err
 	}
-	//项目总数
+	//项目文件总数
 	return count, nil
 }
 
 /**
- * 请求项目列表数据
+ * 请求项目文件列表数据
  */
 func (pfs *projectFileService) GetProjectFileList(projectFile *model.SmProjectFileT) []*model.TplFileT {
 	var fileList []*model.TplFileT
@@ -117,7 +147,7 @@ func (pfs *projectFileService) GetProjectFileList(projectFile *model.SmProjectFi
 }
 
 /**
- * 请求项目列表数据
+ * 请求项目文件列表数据
  * offset：偏移数量
  * limit：一次请求获取的数据条数
  */
@@ -134,8 +164,8 @@ func (pfs *projectFileService) GetProjectFilePageList(projectFile *model.SmProje
 }
 
 /**
- *修改项目
- *projectFile：项目信息
+ *修改项目文件
+ *projectFile：项目文件信息
  */
 func (pfs *projectFileService) UpdateProjectFile(projectFile *model.SmProjectFileT) bool {
 	_, err := pfs.Engine.Id(projectFile.FileId).Update(projectFile)
