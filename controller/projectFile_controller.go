@@ -12,7 +12,6 @@ import (
 	"github.com/kataras/iris/v12/sessions"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -62,7 +61,7 @@ func (pc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
 /**
  * url: /projectFile/addprojectFile
  * type：post
- * desc：添加项目文件
+ * desc：上传项目文件
  */
 func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 	//获取项目ID
@@ -80,6 +79,7 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 	//生成uuid作为batchNo
 	batchNo := uuid.Must(uuid.NewV4()).String()
 	iris.New().Logger().Info(projectId)
+	//获取文件
 	file, info, err := pc.Ctx.FormFile("file")
 	if err != nil {
 		iris.New().Logger().Info(err.Error())
@@ -92,13 +92,17 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 		}
 	}
 	defer file.Close()
-	fname := info.Filename
+	realName := info.Filename
 	//获取文件的AttachType
-	fns := strings.Split(fname, ".")
+	fns := strings.Split(realName, ".")
 	attachType := fns[len(fns)-1]
 
+	//拼接新的字符串名称
+	saveName := strings.Replace(uuid.Must(uuid.NewV4()).String(), "-", "", -1 )
+	saveName = saveName+"."+attachType
+
 	//保存文件至服务器
-	out, err := os.OpenFile("./uploads/"+fname, os.O_WRONLY|os.O_CREATE, 0666)
+	out, err := os.OpenFile("./uploads/"+saveName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		iris.New().Logger().Info(err.Error())
 		return mvc.Response{
@@ -136,10 +140,14 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 		}
 	}
 
+	//获取项目所在文件夹
+	//todo:此处有待优化，更改为服务器地址，将文件地址改为配置化
+	appPath := config.GetAppPath()
+
 	//保存文件信息到数据库
 	tplFile := &model.TplFileT{
 		BatchNo:    batchNo,
-		FilePath:   "/uploads/" + fname,
+		FilePath:   appPath+"/uploads/" + saveName,
 		FileName:   info.Filename,
 		FileSize:   info.Size,
 		FileUid:    uuid.Must(uuid.NewV4()).String(),
@@ -473,14 +481,11 @@ func (pc *ProjectFileController) GetImage(ctx context.Context) {
 	if err != nil {
 		iris.New().Logger().Info(err)
 	}
-	//拼接路径
-	path := filepath.Join(projectFile.FilePath, projectFile.FileName)
-
-	//下载图片
-	//ctx.SendFile("C:\\Users\\lllzj\\Desktop\\pic\\2.jpg","2.jpg")
+	////拼接路径
+	//path := filepath.Join(projectFile.FilePath, projectFile.FileName)
 
 	//浏览图片
-	ctx.ServeFile(path, false)
+	ctx.ServeFile(projectFile.FilePath, false)
 }
 
 /**
@@ -501,10 +506,10 @@ func (pc *ProjectFileController) GetFile(ctx context.Context) {
 	if err != nil {
 		iris.New().Logger().Info(err)
 	}
-	//拼接路径
-	path := filepath.Join(projectFile.FilePath, projectFile.FileName)
+	////拼接路径
+	//path := filepath.Join(projectFile.FilePath, projectFile.FileName)
 
 	//下载图片
-	ctx.SendFile(path, projectFile.FileName)
+	ctx.SendFile(projectFile.FilePath, projectFile.FileName)
 
 }
