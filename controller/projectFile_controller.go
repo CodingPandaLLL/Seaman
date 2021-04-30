@@ -24,6 +24,7 @@ type ProjectFileController struct {
 	Ctx iris.Context
 	//projectFile service
 	ProjectFileService service.ProjectFileService
+
 	//session对象
 	Session *sessions.Session
 }
@@ -34,7 +35,7 @@ func (pc *ProjectFileController) BeforeActivation(a mvc.BeforeActivation) {
 	a.Handle("POST", "/{projectId}", "PostAddProjectFile")
 
 	//删除项目文件
-	a.Handle("DELETE", "/{id}", "DeleteProjectFile")
+	a.Handle("DELETE", "/{projectId}/{id}", "DeleteProjectFile")
 
 	//查询项目文件
 	a.Handle("GET", "single/{id}", "GetProjectFile")
@@ -98,8 +99,8 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 	attachType := fns[len(fns)-1]
 
 	//拼接新的字符串名称
-	saveName := strings.Replace(uuid.Must(uuid.NewV4()).String(), "-", "", -1 )
-	saveName = saveName+"."+attachType
+	saveName := strings.Replace(uuid.Must(uuid.NewV4()).String(), "-", "", -1)
+	saveName = saveName + "." + attachType
 
 	//保存文件至服务器
 	out, err := os.OpenFile("./uploads/"+saveName, os.O_WRONLY|os.O_CREATE, 0666)
@@ -127,9 +128,9 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 	}
 	//从session中获取信息
 	initConfig := config.InitConfig()
-	currentUserId,errSession:=pc.Session.GetInt64(initConfig.Session.CurrentUserId)
+	currentUserId, errSession := pc.Session.GetInt64(initConfig.Session.CurrentUserId)
 	//session为空
-	if errSession!=nil {
+	if errSession != nil {
 		iris.New().Logger().Info("未登录....")
 		return mvc.Response{
 			Object: map[string]interface{}{
@@ -146,13 +147,13 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
 
 	//保存文件信息到数据库
 	tplFile := &model.TplFileT{
-		BatchNo:    batchNo,
-		FilePath:   appPath+"/uploads/" + saveName,
-		FileName:   info.Filename,
-		FileSize:   info.Size,
-		FileUid:    uuid.Must(uuid.NewV4()).String(),
-		AttachType: attachType,
-		CreateUserId: strconv.Itoa(int(currentUserId)),
+		BatchNo:          batchNo,
+		FilePath:         appPath + "/uploads/" + saveName,
+		FileName:         info.Filename,
+		FileSize:         info.Size,
+		FileUid:          uuid.Must(uuid.NewV4()).String(),
+		AttachType:       attachType,
+		CreateUserId:     strconv.Itoa(int(currentUserId)),
 		LastUpdateUserId: strconv.Itoa(int(currentUserId)),
 	}
 	isSuccess := pc.ProjectFileService.AddFile(tplFile)
@@ -194,10 +195,12 @@ func (pc *ProjectFileController) PostAddProjectFile() mvc.Result {
  */
 func (pc *ProjectFileController) DeleteProjectFile() mvc.Result {
 
-	id := pc.Ctx.Params().Get("id")
+	ids := pc.Ctx.Params().Get("id")
+	projectIds := pc.Ctx.Params().Get("projectId")
 
-	projectFileId, err := strconv.Atoi(id)
-	if err != nil {
+	id, errId := strconv.Atoi(ids)
+	projectId, errProjectIds := strconv.Atoi(projectIds)
+	if errId != nil || errProjectIds != nil {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -206,8 +209,11 @@ func (pc *ProjectFileController) DeleteProjectFile() mvc.Result {
 			},
 		}
 	}
-	delete := pc.ProjectFileService.DeleteProjectFile(projectFileId)
-	if !delete {
+	//删除关联
+	deleteDeleteProjectFile := pc.ProjectFileService.DeleteProjectFile(projectId, id)
+	deleteDeleteFile := pc.ProjectFileService.DeleteFile(id)
+
+	if !deleteDeleteProjectFile || !deleteDeleteFile {
 		return mvc.Response{
 			Object: map[string]interface{}{
 				"status":  utils.RECODE_FAIL,
@@ -271,8 +277,7 @@ func (pc *ProjectFileController) GetCount() mvc.Result {
 
 	//获取页面参数
 	//name := pc.Ctx.FormValue("name")
-	projectFileParam := &model.SmProjectFileT{
-	}
+	projectFileParam := &model.SmProjectFileT{}
 	//项目文件总数
 	total, err := pc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
 
@@ -389,9 +394,7 @@ func (pc *ProjectFileController) GetPageList() mvc.Result {
 	//projectFileName := pc.Ctx.FormValue("projectFileName")
 	//projectFileCode := pc.Ctx.FormValue("projectFileCode")
 	//status := pc.Ctx.FormValue("status")
-	projectFileParam := &model.SmProjectFileT{
-
-	}
+	projectFileParam := &model.SmProjectFileT{}
 	projectFileList := pc.ProjectFileService.GetProjectFilePageList(projectFileParam, offset, limit)
 	total, _ := pc.ProjectFileService.GetProjectFileTotalCount(projectFileParam)
 	if len(projectFileList) == 0 {
@@ -441,9 +444,7 @@ func (pc *ProjectFileController) UpdateProjectFile() mvc.Result {
 		}
 	}
 
-	newProjectFile := &model.SmProjectFileT{
-
-	}
+	newProjectFile := &model.SmProjectFileT{}
 	isSuccess := pc.ProjectFileService.UpdateProjectFile(newProjectFile)
 	if !isSuccess {
 		return mvc.Response{

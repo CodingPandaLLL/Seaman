@@ -84,3 +84,19 @@ func PathExists(path string) (bool, error) {
 	}
 	return false, err
 }
+
+/**
+删除文件
+*/
+func DeleteSystemFile(path string) bool {
+	result := true
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		iris.New().Logger().Info(path)
+		iris.New().Logger().Info("文件不存在")
+		result = false
+	}
+	if result {
+		os.Remove(path)
+	}
+	return result
+}

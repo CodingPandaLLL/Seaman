@@ -3,6 +3,7 @@ package service
 import (
 	"Seaman/config"
 	"Seaman/model"
+	"Seaman/utils"
 	"github.com/go-xorm/xorm"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/sessions"
@@ -21,7 +22,10 @@ type ProjectFileService interface {
 	AddFile(model *model.TplFileT) bool
 
 	//删除项目文件
-	DeleteProjectFile(id int) bool
+	DeleteFile(id int) bool
+
+	//删除项目文件
+	DeleteProjectFile(projectId int, id int) bool
 
 	//通过id查询项目文件
 	GetProjectFile(fileId int) (model.TplFileT, error)
@@ -93,17 +97,40 @@ func (pfs *projectFileService) AddFile(file *model.TplFileT) bool {
 }
 
 /**
- * 删除项目文件
+ * 删除项目文关联关系
  */
-func (pfs *projectFileService) DeleteProjectFile(projectFileId int) bool {
+func (pfs *projectFileService) DeleteProjectFile(projectId int, id int) bool {
 
-	projectFile := model.SmProjectFileT{ProjectId: int64(projectFileId)}
-	_, err := pfs.Engine.Where(" id = ? ", projectFileId).Delete(projectFile)
+	projectFile := model.SmProjectFileT{ProjectId: int64(projectId), FileId: int64(id)}
+	_, err := pfs.Engine.Delete(projectFile)
 	if err != nil {
 		iris.New().Logger().Info(err.Error())
 	}
-
 	return err == nil
+}
+
+/**
+ * 删除文件
+ */
+func (pfs *projectFileService) DeleteFile(id int) bool {
+
+	projectFile := model.TplFileT{Id: int64(id)}
+
+	//服务器文件
+	_, err := pfs.Engine.Get(&projectFile)
+	if err != nil {
+		iris.New().Logger().Info(err.Error())
+	}
+	path := projectFile.FilePath
+	result := utils.DeleteSystemFile(path)
+	//删除文件数据库记录
+	_, err = pfs.Engine.Delete(projectFile)
+	if result {
+		return result
+	} else {
+		return err == nil
+	}
+
 }
 
 /**
@@ -136,7 +163,7 @@ func (pfs *projectFileService) GetProjectFileTotalCount(projectFile *model.SmPro
 func (pfs *projectFileService) GetProjectFileList(projectFile *model.SmProjectFileT) []*model.TplFileT {
 	var fileList []*model.TplFileT
 	//多表关联查询
-	session := pfs.Engine.SQL("SELECT tft.* FROM seaman.tpl_file_t tft left join seaman.sm_project_file_t spft on spft.file_id =tft.id where spft.project_id= ?",projectFile.ProjectId)
+	session := pfs.Engine.SQL("SELECT tft.* FROM seaman.tpl_file_t tft left join seaman.sm_project_file_t spft on spft.file_id =tft.id where spft.project_id= ?", projectFile.ProjectId)
 	err := session.Find(&fileList)
 	if err != nil {
 		iris.New().Logger().Error(err.Error())
