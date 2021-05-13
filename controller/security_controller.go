@@ -43,16 +43,28 @@ func (ac *SecurityController) BeforeActivation(a mvc.BeforeActivation) {
  * 请求类型：Get
  * 请求url：admin/singout
  */
-func (ac *SecurityController) GetSingout() mvc.Result {
+func (ac *SecurityController) GetLogout() mvc.Result {
 
 	initConfig := config.InitConfig()
 	//删除session，下次需要从新登录
 	ac.Session.Delete(initConfig.Session.CurrentUserId)
-	return mvc.Response{
-		Object: map[string]interface{}{
-			"status":  utils.RECODE_OK,
-			"success": utils.Recode2Text(utils.RESPMSG_SIGNOUT),
-		},
+	//从session中获取信息
+	currentUser := ac.Session.Get(initConfig.Session.CurrentUserId)
+	//session为空
+	if currentUser == nil {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_OK,
+				"success": utils.Recode2Text(utils.RESPMSG_SIGNOUT),
+			},
+		}
+	} else {
+		return mvc.Response{
+			Object: map[string]interface{}{
+				"status":  utils.RECODE_FAIL,
+				"success": utils.Recode2Text(utils.RESPMSG_FAIL),
+			},
+		}
 	}
 }
 
@@ -91,7 +103,7 @@ func (ac *SecurityController) GetCount() mvc.Result {
 func (ac *SecurityController) GetCurrentUser() mvc.Result {
 	initConfig := config.InitConfig()
 	//从session中获取信息
-	currentUser:=ac.Session.Get(initConfig.Session.CurrentUserId)
+	currentUser := ac.Session.Get(initConfig.Session.CurrentUserId)
 	//session为空
 	if currentUser == nil {
 		return mvc.Response{
@@ -138,7 +150,7 @@ func (ac *SecurityController) GetCurrentUser() mvc.Result {
 		Object: map[string]interface{}{
 			"userid": userObject.Id,
 			"name":   userObject.Lastname,
-			"title":userObject.Account,
+			"title":  userObject.Account,
 		},
 	}
 }
@@ -195,10 +207,10 @@ func (ac *SecurityController) PostLogin(context iris.Context) mvc.Result {
 	resultUser.UserId = user.Id
 	return mvc.Response{
 		Object: map[string]interface{}{
-			"status": "ok",
-			"success":     "登录成功",
-			"message":     "登录成功",
-			"user":        resultUser.LoginUserToRespDesc(),
+			"status":  "ok",
+			"success": "登录成功",
+			"message": "登录成功",
+			"user":    resultUser.LoginUserToRespDesc(),
 		},
 	}
 }
